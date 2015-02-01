@@ -67,9 +67,11 @@ function ScoreKill( Controller Killer, Controller Other )
 			}
 		}
 
-		if(float(NumDefendersLeft) / PlayersAtLastRoundStart / 2 <= fActualShowEnemyMarkersPortionPlayersAlive && !AOCGRI(GameReplicationInfo).bShowEnemyMarkers)
+		if(float(NumDefendersLeft) / (PlayersAtLastRoundStart/2) <= fActualShowEnemyMarkersPortionPlayersAlive && !LastStandGRI(GameReplicationInfo).bShowDefenderHudMarkers)
 		{   
-			ShowMarkersOnDefenders();
+			LastStandGRI(GameReplicationInfo).bShowDefenderHudMarkers = true;
+			LastStandGRI(GameReplicationInfo).bNetDirty = true;
+			//ShowMarkersOnDefenders();
 		}
 
 		if ( NumDefendersLeft == 0 )
@@ -202,6 +204,9 @@ function StartRound()
 	local CMWHUDMArker DefenderMarker;
 	
 	super.StartRound();
+	
+	LastStandGRI(GameReplicationInfo).bShowDefenderHudMarkers = false;
+	LastStandGRI(GameReplicationInfo).bNetDirty = true;
 	
 	LastStandGRI(WorldInfo.GRI).DefendingTeam = CurrentDefendingTeam;
 	
