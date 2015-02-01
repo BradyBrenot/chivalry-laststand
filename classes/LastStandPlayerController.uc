@@ -64,3 +64,16 @@ reliable client function ShowDefaultGameHeader()
 		ClientShowLocalizedHeaderText(Localize("LastStand","SpawnHeader","LastStand"),,Localize("LastStand","SpawnSubHeaderAttacker","LastStand"),true,true);
 	}
 }
+
+function PawnDied(Pawn P)
+{
+	//Use LTS' logic if we're defenders, else use normal logic
+	if(PlayerReplicationInfo.Team.TeamIndex == DefendingTeam)
+	{
+		super(AOCLTSPlayerController).PawnDied(P);
+	}
+	else
+	{
+		super(AOCPlayerController).PawnDied(P);
+	}
+}

@@ -159,6 +159,11 @@ function AOCEndRound()
 		CurrentDefendingTeam = EFAC_Mason;
 	}
 	
+	foreach WorldInfo.AllControllers(class'LastStandPlayerController', LSPC)
+	{
+		LSPC.NotifyCurrentDefendingTeam(CurrentDefendingTeam);
+	}
+	
 	GotoState( 'AOCPostRound' );
 }
 
@@ -193,14 +198,17 @@ function PlayerStart ChoosePlayerStart( Controller Player, optional byte InTeam 
 
 function StartRound()
 {
-	local AOCPlayerController PC;
+	local Controller C;
 	local CMWHUDMArker DefenderMarker;
 	
 	super.StartRound();
 	
-	foreach WorldInfo.AllControllers(class'AOCPlayerController', PC)
+	LastStandGRI(WorldInfo.GRI).DefendingTeam = CurrentDefendingTeam;
+	
+	foreach WorldInfo.AllControllers(class'Controller', C)
 	{
-		PC.InitializeTimer(0, true);
+		AOCPlayerController(C).InitializeTimer(0, true);
+		C.PlayerReplicationInfo.bOutOfLives = !AOCPlayerController(C).bReady && C.PlayerReplicationInfo.Team.TeamIndex == CurrentDefendingTeam;
 	}
 	
 	LastStandDuration = 0.f;
@@ -211,6 +219,23 @@ function StartRound()
 	}
 	
 	DefenderMarkers.Remove(0, DefenderMarkers.Length);
+}
+
+function RequestTime(AOCPlayerController PC)
+{
+	PC.InitializeTimer(LastStandDuration, true);
+}
+
+function RestartPlayer(Controller NewPlayer)
+{
+	if (NewPlayer.PlayerReplicationInfo.Team != none && NewPlayer.PlayerReplicationInfo.Team.TeamIndex == CurrentDefendingTeam)
+	{
+		super(AOCLTS).RestartPlayer(NewPlayer);
+	}
+	else
+	{
+		super(AOCGame).RestartPlayer(NewPlayer);
+	}
 }
 
 function ShowMarkersOnDefenders()
@@ -264,7 +289,7 @@ auto State AOCPreRound
 		{
 			if (AOCPlayerController(PC) != none)
 			{
-				if (AOCPlayerController(PC).bReady)
+				if (AOCPlayerController(PC).bReady || PC.PlayerReplicationInfo.Team.TeamIndex != CurrentDefendingTeam)
 				{
 					PC.PlayerReplicationInfo.bOutOfLives = false;
 				}
@@ -336,7 +361,7 @@ State AOCRoundInProgress
 			}
 		}
 
-		super.SpawnReadyPlayers();
+		super(AOCGame).SpawnReadyPlayers();
 	}
 
 	function PerformOnSpawn(Controller C)
@@ -353,7 +378,7 @@ State AOCRoundInProgress
 	{
 		if(PC.PlayerReplicationInfo.Team.TeamIndex != CurrentDefendingTeam)
 		{
-			return super.AddPlayerToQueue(PC, bSpawnNextTime);
+			return super(AOCGame).AddPlayerToQueue(PC, bSpawnNextTime);
 		}
 		else
 		{
@@ -377,6 +402,7 @@ DefaultProperties
     PlayerControllerClass=class'LastStandPlayerController'
     DefaultPawnClass=class'LastStandPawn'
 	PlayerReplicationInfoClass=class'LastStandPRI'
+	GameReplicationInfoClass=class'LastStandGRI'
 	
 	CurrentDefendingTeam = EFAC_Agatha
 	DefenderKillTimeBonus = 1.f

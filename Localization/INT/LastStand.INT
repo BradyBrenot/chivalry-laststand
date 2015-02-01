@@ -5,3 +5,7 @@ SpawnSubHeaderAttacker=Elminate the enemy team as quickly as possible!
 WelcomeChatText=Last Stand: One team has infinite respawns, the other spawns only once. Teams switch after the defenders are wiped out. The team that held out the longest as the defending team wins the round, with bonus time given for kills inflicted on the attackers.
 RoundEnded=Round victory goes to the {FACTION}, who lasted {TIMELASTED} seconds (including bonus time from kills), scoring {KILLS} kills in the process.
 SubRoundEnded={FACTION} eliminated. They lasted {TIMELASTED} seconds (including bonus time from kills), scoring {KILLS} kills in the process.
+ObjectiveName=Last Stand
+ObjectiveDescriptionDefenders=Survive!
+ObjectiveDescriptionAttackers=Eliminate the other team!
+StatusText={NUMDEFENDERS} defenders left
