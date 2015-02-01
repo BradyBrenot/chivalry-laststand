@@ -406,4 +406,6 @@ DefaultProperties
 	
 	CurrentDefendingTeam = EFAC_Agatha
 	DefenderKillTimeBonus = 1.f
+	ModDisplayString="Last Stand"
+	ModeDisplayString="Last Stand"
 }
