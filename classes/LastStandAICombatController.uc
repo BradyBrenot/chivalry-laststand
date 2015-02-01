@@ -1,0 +1,1 @@
+class LastStandAICombatController extends AOCAICombatController;

@@ -1,0 +1,1 @@
+class LastStandPawn extends AOCPawn;
