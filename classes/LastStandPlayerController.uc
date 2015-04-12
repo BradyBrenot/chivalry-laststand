@@ -5,7 +5,7 @@ var EAOCFaction DefendingTeam;
 reliable client function ClientOnFirstSpawn()
 {
 	//ReceiveChatMessage("",Localize("LastStand", "WelcomeChatText", "LastStand"),EFAC_ALL,false,false,,false);
-	ReceiveChatMessage("","Last Stand: One team has infinite respawns, the other spawns only once. Teams switch after the defenders are wiped out. The team that held out the longest as the defending team wins the round, with bonus time given for kills inflicted on the attackers.",EFAC_ALL,false,false,,false);
+	ReceiveChatMessage("","Last Stand: One team has infinite respawns, the other spawns only once. Teams switch after the defenders are wiped out. The defending team gets points for kills, and gets more points as they score more kills and as they last longer. The team who reaches the goal first wins! (Mason still has a chance to win if Agatha reaches the goal first)",EFAC_ALL,false,false,,false);
 }
 
 function NotifyCurrentDefendingTeam(EAOCFaction Defenders)
@@ -34,29 +34,14 @@ reliable client function NotifySubRoundEnded(EAOCFaction Defenders, float TimeLa
 	ReceiveChatMessage("",
 		Repl(
 			Repl(
-				Repl("{FACTION} eliminated. They lasted {TIMELASTED} seconds (including bonus time from kills), scoring {KILLS} kills in the process.", "{TIMELASTED}", TimeLasted),
+				Repl("{FACTION} eliminated. They lasted {TIMELASTED} seconds, getting {KILLS} kills in the process.", "{TIMELASTED}", Round(TimeLasted)),
 				"{KILLS}", Kills),
 			"{FACTION}", Localize("Common", Defenders == EFAC_Agatha ? "AgathaKnights" : "MasonOrder", "AOCUI"))
 		,EFAC_ALL,false,false,,false);
 }
 
-reliable client function NotifyRoundEnded(EAOCFaction WinningFaction, float TimeLasted, int Kills)
+reliable client function NotifyRoundEnded()
 {
-	/*ReceiveChatMessage("",
-		Repl(
-			Repl(
-				Repl(Localize("LastStand", "RoundEnded", "LastStand"), "{TIMELASTED}", TimeLasted),
-				"{KILLS}", Kills),
-			"{FACTION}", Localize("Common", WinningFaction == EFAC_Agatha ? "AgathaKnights" : "MasonOrder", "AOCUI"))
-		,EFAC_ALL,false,false,,false);*/
-		
-	ReceiveChatMessage("",
-		Repl(
-			Repl(
-				Repl("Round victory goes to the {FACTION}, who lasted {TIMELASTED} seconds (including bonus time from kills), scoring {KILLS} kills in the process.", "{TIMELASTED}", TimeLasted),
-				"{KILLS}", Kills),
-			"{FACTION}", Localize("Common", WinningFaction == EFAC_Agatha ? "AgathaKnights" : "MasonOrder", "AOCUI"))
-		,EFAC_ALL,false,false,,false);
 }
 
 function TickGameTimer()
@@ -133,5 +118,37 @@ function HandleSpawnTimer()
 	else
 	{
 		super(AOCPlayerController).HandleSpawnTimer();
+	}
+}
+
+reliable client function ClientPossessedPawn(EAOCFaction Fact, bool bRespawnDuringGame)
+{
+	super.ClientPossessedPawn(Fact, bRespawnDuringGame);
+
+	LastStandHUD(MyHud).OnRepDefendingTeam();
+}
+
+reliable client function NotifyAgathaCanWin()
+{
+	ReceiveChatMessage("", "Agatha has more than"@Worldinfo.GRI.GoalScore@"points! They will win if Mason can't match or beat their score this round!",EFAC_ALL,false,false,,false);
+}
+
+exec function SpectatorNext()
+{
+	LastStandHUD(MyHud).HideHelp();
+}
+
+exec function ForwardSpawn()
+{
+	super.ForwardSpawn();
+	LastStandHUD(MyHud).ShowHelp();
+}
+
+state Spectating
+{
+	exec function SpectatorNext()
+	{
+		super.SpectatorNext();
+		LastStandHUD(MyHud).HideHelp();
 	}
 }

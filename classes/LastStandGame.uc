@@ -3,17 +3,12 @@ class LastStandGame extends AOCLTS;
 //Always begin with Agatha, go to Mason, ...
 var EAOCFaction CurrentDefendingTeam;
 
-//How long did each team last this round?
-var float RoundLastStandDurations[EAOCFaction];
-
-//How many kills did each team get? (Only kills as defender are worth anything)
-var int RoundLastStandKills[EAOCFaction];
+var array<CMWHUDMarker> DefenderMarkers;
 
 var float LastStandDuration;
 
-var float DefenderKillTimeBonus;
-
-var array<CMWHUDMarker> DefenderMarkers;
+//How many kills did each team get? (Only kills as defender are worth anything)
+var int RoundLastStandKills;
 
 //LTS ignores the "GoalScore" config variable for legacy reasons. We don't have to.
 event PreBeginPlay()
@@ -82,8 +77,10 @@ function ScoreKill( Controller Killer, Controller Other )
 	else
 	{
 		//An attacker died
-		++RoundLastStandKills[CurrentDefendingTeam];
-		LastStandDuration += DefenderKillTimeBonus;
+		++RoundLastStandKills;
+		Teams[CurrentDefendingTeam].Score += LastStandGRI(Worldinfo.GRI).CurrentMultiplier;
+		RoundScores[CurrentDefendingTeam] = Teams[CurrentDefendingTeam].Score;
+		LastStandGRI(Worldinfo.GRI).CurrentMultiplier += 1;
 	}
 }
 
@@ -92,50 +89,33 @@ function AOCEndRound()
 {
 	local LastStandPlayerController LSPC;
 	
-	RoundLastStandDurations[CurrentDefendingTeam] = LastStandDuration;
-	
 	foreach WorldInfo.AllControllers(class'LastStandPlayerController', LSPC)
 	{
-		LSPC.NotifySubRoundEnded(CurrentDefendingTeam, RoundLastStandDurations[CurrentDefendingTeam], RoundLastStandKills[CurrentDefendingTeam]);
+		LSPC.NotifySubRoundEnded(CurrentDefendingTeam, LastStandDuration, RoundLastStandKills);
 	}
 	
 	if(CurrentDefendingTeam == EFAC_Mason)
 	{
 		//Figure out who the RoundWinner is
-		if(RoundLastStandDurations[EFAC_Agatha] > RoundLastStandDurations[EFAC_Mason])
+		if(Teams[0].Score > Teams[1].Score)
 		{
 			RoundWinner = Teams[0];
 		}
-		else if(RoundLastStandDurations[EFAC_Mason] > RoundLastStandDurations[EFAC_Agatha])
+		else if(Teams[1].Score > Teams[0].Score)
 		{
 			RoundWinner = Teams[1];
 		}
 		
 		RoundsPlayed++;
+
+		foreach WorldInfo.AllControllers(class'LastStandPlayerController', LSPC)
+		{
+			LSPC.NotifyRoundEnded();
+		}
 	
 		if(RoundWinner != none)
 		{
-			RoundScores[RoundWinner.TeamIndex]++;
-			AOCLTSGRI(GameReplicationInfo).RoundsWon[RoundWinner.TeamIndex] = RoundScores[RoundWinner.TeamIndex];
-			Teams[RoundWinner.TeamIndex].Score = RoundScores[RoundWinner.TeamIndex];
-			
-			foreach WorldInfo.AllControllers(class'LastStandPlayerController', LSPC)
-			{
-				LSPC.NotifyRoundEnded(RoundWinner.TeamIndex == 0 ? EFAC_Agatha : EFAC_Mason, RoundLastStandDurations[RoundWinner.TeamIndex], RoundLastStandKills[RoundWinner.TeamIndex]);
-			}
-
-			if( RoundWinner.TeamIndex == 0 )
-			{
-				BroadcastSound(AgathaWinSound);
-				UpdateEvents(0);
-			}
-			else
-			{
-				BroadcastSound(MasonWinSound);
-				UpdateEvents(1);
-			}
-
-			if ( RoundScores[RoundWinner.TeamIndex] == GoalScore )
+			if ( RoundWinner.Score >= GoalScore )
 			{
 				MatchWinner = RoundWinner;
 				if (LastKiller != none && LastKiller.PlayerReplicationInfo.Team == MatchWinner )
@@ -144,20 +124,20 @@ function AOCEndRound()
 					EndGame( GetFirstPRIFromTeam(MatchWinner), "TeamScoreLimit" );
 				return;
 			}
-			else if (RoundScores[RoundWinner.TeamIndex] == GoalScore - 1)
-			{
-				BroadcastSystemMessage(8, class'AOCSystemMessages'.static.CreateLocalizationdata("Common", RoundWinner.TeamIndex == EFAC_Agatha ? "AgathaKnights" : "MasonOrder", "AOCUI"),,EFAC_ALL);
-			}
 		}
-		else    //how in the hell did we get a draw?
-		{
-			BroadcastSystemMessage(9,,,EFAC_ALL);
-		}
-		
+
 		CurrentDefendingTeam = EFAC_Agatha;
 	}
 	else
 	{
+		if(Teams[0].Score >= GoalScore)
+		{
+			foreach WorldInfo.AllControllers(class'LastStandPlayerController', LSPC)
+			{
+				LSPC.NotifyAgathaCanWin();
+			}
+		}
+
 		CurrentDefendingTeam = EFAC_Mason;
 	}
 	
@@ -217,6 +197,9 @@ function StartRound()
 	}
 	
 	LastStandDuration = 0.f;
+	RoundLastStandKills = 0;
+	LastStandGRI(GameReplicationInfo).CurrentMultiplier = 1;
+	LastStandGRI(GameReplicationInfo).MultiplierProgress = 0;
 	
 	foreach DefenderMarkers(DefenderMarker)
 	{
@@ -318,7 +301,7 @@ State AOCRoundInProgress
 		local AOCPlayerController PC;
 
 		super(AOCGame).Tick( DeltaTime );
-		
+
 		LastStandDuration += DeltaTime;
 		
 		TimeLeft = 99;
@@ -337,6 +320,15 @@ State AOCRoundInProgress
 				}
 			}
 		}
+
+		LastStandGRI(Worldinfo.GRI).MultiplierProgress += DeltaTime / LastStandGRI(Worldinfo.GRI).SecondsUntilMultiplierIncrease;
+		if(LastStandGRI(Worldinfo.GRI).MultiplierProgress > 1)
+		{
+			LastStandGRI(Worldinfo.GRI).MultiplierProgress -= 1;
+			LastStandGRI(Worldinfo.GRI).CurrentMultiplier += 1;
+		}
+
+		Worldinfo.GRI.bNetDirty = true;
 	}
 
 	function SpawnReadyPlayers()
@@ -403,6 +395,8 @@ State AOCRoundInProgress
 
 DefaultProperties
 {
+	HUDType=class'LastStandHUD'
+
 	DefaultAIControllerClass=class'LastStandAICombatController'
     PlayerControllerClass=class'LastStandPlayerController'
     DefaultPawnClass=class'LastStandPawn'
@@ -410,7 +404,6 @@ DefaultProperties
 	GameReplicationInfoClass=class'LastStandGRI'
 	
 	CurrentDefendingTeam = EFAC_Agatha
-	DefenderKillTimeBonus = 1.f
-	ModDisplayString="Last Stand"
+	ModDisplayString="Last Stand v2"
 	ModeDisplayString="Last Stand"
 }
