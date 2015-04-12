@@ -43,7 +43,7 @@ exec function ShowHUD(optional bool bShowOverlay = true)
 	HudWidget = MovieRoot.GetObject("LSHud");
 
 	//And now the text...
-	DescriptionMovieClip.GetObject("description").SetString("htmlText", "Take as many enemies out with you as you can!<br/><br/>The <b>defending</b> team:<br/>is on its LAST STAND<br/>cannot respawn<br/>starts with bonus health<br/>gets points from kills, with a bonus multiplier<br/><br/>The <b>attacking</b> team:<br/>has the defenders outnumbered<br/>can respawn<br/>does not score points");
+	DescriptionMovieClip.GetObject("description").SetString("htmlText", "Take as many enemies out with you as you can!<br/><br/>The <b>defending</b> team:<br/>is on its LAST STAND<br/>cannot respawn<br/>starts with bonus health<br/>gets points from kills, with a bonus multiplier<br/><br/>The <b>attacking</b> team:<br/>has the defenders SURROUNDED<br/>can respawn<br/>does not score points");
 	DescriptionMovieClip.GetObject("instructions").SetString("htmlText", "Press <b>ATTACK</b> to close<br/>Press <b>F1</b> to show again at any time");
 
 	LSGRI = LastStandGRI(Worldinfo.GRI);
